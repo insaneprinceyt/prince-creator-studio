@@ -1,22 +1,29 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,sendPasswordResetEmail,signOut,GoogleAuthProvider,signInWithPopup} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+import {getFirestore,doc,getDoc} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 const $=id=>document.getElementById(id),status=message=>{$("auth-status").textContent=message};
-let mode="login",auth;
+let mode="login",auth,db,activeUid=null;window.princeSignedIn=false;
 function switchMode(next){mode=next;$("auth-submit").textContent=mode==="login"?"Login":"Create account";$("auth-password").autocomplete=mode==="login"?"current-password":"new-password";status("");}
 $("auth-login-tab").onclick=()=>switchMode("login");$("auth-register-tab").onclick=()=>switchMode("register");
 const configured=["apiKey","authDomain","projectId","appId"].every(key=>typeof firebaseConfig[key]==="string"&&firebaseConfig[key].trim()&&!firebaseConfig[key].includes("REPLACE_"));
 if(!configured){status("Setup needed: add your Firebase web configuration to firebase-config.js. No account has been created.");}
 else {
  try {
-  auth=getAuth(initializeApp(firebaseConfig));
+  const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);
   $("auth-setup").textContent="Sign in or create an account with your email. Never share your password.";
   $("auth-submit").disabled=false;$("auth-reset").disabled=false;$("auth-google").disabled=false;
-  onAuthStateChanged(auth,user=>{
+  onAuthStateChanged(auth,async user=>{
+   window.princeSignedIn=!!user;
+   document.body.classList.toggle("auth-locked",!user);
    $("auth-signed-out").hidden=!!user;$("auth-signed-in").hidden=!user;
    $("auth-user").textContent=user?.email||"";
    $("account-header").textContent=user?"My Account":"Login / Register";
-  },()=>status("Could not check login status. Verify Firebase settings."));
+   if(!user){activeUid=null;setTier("Free","Sign in to see your membership.");show("account");return;}
+   activeUid=user.uid;
+   show("home");
+   await refreshTier(user.uid);
+  },()=>{window.princeSignedIn=false;document.body.classList.add("auth-locked");show("account");status("Could not check login status. Verify Firebase settings.");});
  }catch(e){status("Firebase setup error. Check firebase-config.js and authorised domains.");}
 }
 $("auth-form").addEventListener("submit",async e=>{
@@ -53,3 +60,23 @@ $("auth-google").addEventListener("click",async()=>{
   status(messages[error.code]||"Google sign-in failed. Check Firebase Google provider and authorised domains.");
  }finally{button.disabled=false}
 });
+
+function setTier(tier,message){
+ $("auth-tier").textContent=tier;
+ $("membership-status").textContent=message;
+ $("membership-premium").textContent=tier==="Premium"?"Active":"Not active";
+}
+async function refreshTier(uid){
+ setTier("Free","Checking your membership in Firebase...");
+ try{
+  const snapshot=await getDoc(doc(db,"memberships",uid));
+  if(activeUid!==uid)return;
+  const tier=snapshot.exists()&&snapshot.data().tier==="premium"?"Premium":"Free";
+  setTier(tier,tier==="Premium"?"Premium membership active.":"Free membership active. Premium is granted manually by the site owner.");
+ }catch(error){
+  if(activeUid!==uid)return;
+  setTier("Free","Membership could not be verified. Free access only. Check Firestore setup and security rules.");
+ }
+}
+$("membership-refresh").addEventListener("click",()=>{if(auth?.currentUser)refreshTier(auth.currentUser.uid);});
+if(!configured)show("account");
