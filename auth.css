@@ -1,2 +1,12 @@
 .auth-panel{max-width:560px}.auth-tabs{display:flex;gap:12px;margin:16px 0}.auth-tabs button{flex:1}.auth-panel form{display:grid;gap:12px}.auth-panel input{width:100%}.auth-panel #auth-reset{margin-top:12px}.auth-panel #auth-status{min-height:1.5em;color:#b7a5ff}#account-header{white-space:nowrap}
 .auth-google{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:13px 16px;border:1px solid #64748b;border-radius:10px;background:#fff;color:#172033;font-size:15px;font-weight:700;cursor:pointer}.auth-google:hover{background:#edf2ff}.auth-google:disabled{opacity:.55;cursor:not-allowed}.auth-google-g{font-size:21px;font-weight:800;color:#4285f4}.auth-divider{text-align:center;color:#9ca8c7;margin:16px 0 4px}
+
+body.auth-locked .sidebar,body.auth-locked .main>header,body.auth-locked .main>footer{display:none!important}
+body.auth-locked .main{width:100%;max-width:600px;margin:7vh auto;padding:16px}
+body.auth-locked .view{display:none!important}
+body.auth-locked #account{display:block!important}
+body.auth-locked .shell{display:block}
+.membership-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin:20px 0}
+.membership-card{padding:20px;border:1px solid #64748b;border-radius:14px;background:rgba(99,102,241,.08)}
+.membership-card strong{display:block;font-size:24px;margin:8px 0}
+.membership-card span{color:#a5b4fc}
