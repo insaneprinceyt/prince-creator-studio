@@ -1,0 +1,1 @@
+.auth-panel{max-width:560px}.auth-tabs{display:flex;gap:12px;margin:16px 0}.auth-tabs button{flex:1}.auth-panel form{display:grid;gap:12px}.auth-panel input{width:100%}.auth-panel #auth-reset{margin-top:12px}.auth-panel #auth-status{min-height:1.5em;color:#b7a5ff}#account-header{white-space:nowrap}
