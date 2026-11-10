@@ -1,13 +1,23 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Memberships are created/edited only in Firebase Console or Admin SDK.
-    // Signed-in users may read only their own membership.
-    match /memberships/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if false;
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.enabled == true;
     }
-    // No other client database access until specific secure rules are added.
+    match /admins/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+    match /memberships/{userId} {
+      allow get: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['tier'])
+        && request.resource.data.tier in ['free', 'premium'];
+      allow delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }
