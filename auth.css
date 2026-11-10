@@ -10,3 +10,9 @@ body.auth-locked .shell{display:block}
 .membership-card{padding:20px;border:1px solid #64748b;border-radius:14px;background:rgba(99,102,241,.08)}
 .membership-card strong{display:block;font-size:24px;margin:8px 0}
 .membership-card span{color:#a5b4fc}
+
+#admin-nav[hidden]{display:none!important}
+.admin-member{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;border:1px solid #475569;border-radius:10px;padding:12px;margin:10px 0}
+.admin-member code{overflow-wrap:anywhere;max-width:100%;font-size:12px}
+#admin-form{display:grid;gap:12px;max-width:640px}
+#admin-form input,#admin-form select{width:100%}
