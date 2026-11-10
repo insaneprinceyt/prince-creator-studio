@@ -45,7 +45,7 @@
   const vertices=corners(p,f.name).map(transform);
   const edge1=vertices[1].map((v,i)=>v-vertices[0][i]),edge2=vertices[3].map((v,i)=>v-vertices[0][i]);
   const normal=[edge1[1]*edge2[2]-edge1[2]*edge2[1],edge1[2]*edge2[0]-edge1[0]*edge2[2],edge1[0]*edge2[1]-edge1[1]*edge2[0]];
-  if(normal[2]<=0)continue;
+  if(normal[2]>=0)continue;
   const [ux,uy,uw,uh]=f.rect;
   for(let py=0;py<uh;py++)for(let px=0;px<uw;px++){
    const ix=(uy+py)*64+(ux+px),offset=ix*4,alpha=pixels[offset+3];if(!alpha)continue;
