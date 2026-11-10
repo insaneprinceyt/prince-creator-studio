@@ -1,9 +1,9 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,sendPasswordResetEmail,signOut,GoogleAuthProvider,signInWithPopup} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-import {getFirestore,doc,getDoc} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+import {getFirestore,doc,getDoc,collection,getDocs,query,limit,setDoc} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 const $=id=>document.getElementById(id),status=message=>{$("auth-status").textContent=message};
-let mode="login",auth,db,activeUid=null;window.princeSignedIn=false;
+let mode="login",auth,db,activeUid=null;window.princeSignedIn=false;window.princeIsAdmin=false;
 function switchMode(next){mode=next;$("auth-submit").textContent=mode==="login"?"Login":"Create account";$("auth-password").autocomplete=mode==="login"?"current-password":"new-password";status("");}
 $("auth-login-tab").onclick=()=>switchMode("login");$("auth-register-tab").onclick=()=>switchMode("register");
 const configured=["apiKey","authDomain","projectId","appId"].every(key=>typeof firebaseConfig[key]==="string"&&firebaseConfig[key].trim()&&!firebaseConfig[key].includes("REPLACE_"));
@@ -19,10 +19,10 @@ else {
    $("auth-signed-out").hidden=!!user;$("auth-signed-in").hidden=!user;
    $("auth-user").textContent=user?.email||"";
    $("account-header").textContent=user?"My Account":"Login / Register";
-   if(!user){activeUid=null;setTier("Free","Sign in to see your membership.");show("account");return;}
+   if(!user){activeUid=null;setAdmin(false);setTier("Free","Sign in to see your membership.");show("account");return;}
    activeUid=user.uid;
    show("home");
-   await refreshTier(user.uid);
+   await Promise.all([refreshTier(user.uid),checkAdmin(user.uid)]);
   },()=>{window.princeSignedIn=false;document.body.classList.add("auth-locked");show("account");status("Could not check login status. Verify Firebase settings.");});
  }catch(e){status("Firebase setup error. Check firebase-config.js and authorised domains.");}
 }
@@ -80,3 +80,51 @@ async function refreshTier(uid){
 }
 $("membership-refresh").addEventListener("click",()=>{if(auth?.currentUser)refreshTier(auth.currentUser.uid);});
 if(!configured)show("account");
+
+function setAdmin(allowed){
+ window.princeIsAdmin=allowed;
+ $("admin-nav").hidden=!allowed;
+ if(!allowed){$("admin-list").replaceChildren();$("admin-message").textContent="Admin access is not enabled for this account.";}
+}
+async function checkAdmin(uid){
+ setAdmin(false);
+ try{
+  const snap=await getDoc(doc(db,"admins",uid));
+  if(activeUid!==uid)return;
+  const allowed=snap.exists()&&snap.data().enabled===true;
+  setAdmin(allowed);
+  if(allowed){$("admin-message").textContent="Admin access verified.";await loadMembers();}
+ }catch(error){if(activeUid===uid)$("admin-message").textContent="Unable to verify admin access. Check Firestore rules.";}
+}
+async function loadMembers(){
+ if(!window.princeIsAdmin||!auth?.currentUser)return;
+ const list=$("admin-list");list.replaceChildren();
+ $("admin-message").textContent="Loading membership records...";
+ try{
+  const snapshot=await getDocs(query(collection(db,"memberships"),limit(100)));
+  if(!window.princeIsAdmin)return;
+  snapshot.forEach(s=>{
+   const row=document.createElement("div");row.className="admin-member";
+   const name=document.createElement("code");name.textContent=s.id;
+   const tier=document.createElement("strong");tier.textContent=s.data().tier==="premium"?"Premium":"Free";
+   const edit=document.createElement("button");edit.type="button";edit.className="secondary";edit.textContent="Edit";edit.addEventListener("click",()=>{$("admin-uid").value=s.id;$("admin-tier").value=s.data().tier==="premium"?"premium":"free";$("admin-uid").focus();});
+   row.append(name,tier,edit);list.append(row);
+  });
+  $("admin-message").textContent="Showing "+snapshot.size+" membership records (up to 100). Accounts without records are Free.";
+ }catch(error){$("admin-message").textContent="Cannot list memberships. Publish the updated Firestore rules first.";}
+}
+$("admin-reload").addEventListener("click",loadMembers);
+$("admin-form").addEventListener("submit",async event=>{
+ event.preventDefault();
+ if(!window.princeIsAdmin||!auth?.currentUser)return;
+ const uid=$("admin-uid").value.trim(),tier=$("admin-tier").value;
+ if(!/^[A-Za-z0-9]{10,128}$/.test(uid)){$("admin-message").textContent="Enter a valid Firebase Authentication UID.";return;}
+ if(!confirm("Set membership for UID "+uid+" to "+tier+"?"))return;
+ $("admin-message").textContent="Saving membership...";
+ try{
+  await setDoc(doc(db,"memberships",uid),{tier});
+  $("admin-message").textContent="Membership saved for "+uid+".";
+  await loadMembers();
+  if(uid===auth.currentUser.uid)await refreshTier(uid);
+ }catch(error){$("admin-message").textContent="Save denied. Confirm your admin record and published Firestore rules.";}
+});
