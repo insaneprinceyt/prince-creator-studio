@@ -4,11 +4,12 @@
  ctx.imageSmoothingEnabled=false;
  const display=document.createElement("canvas");display.width=64;display.height=64;
  const d=display.getContext("2d",{willReadFrequently:true});
+ window.princeSkinTexture=display;
  const status=t=>$("skin-status").textContent=t;
  const undo=[],redo=[];let dragging=false,changed=false,lastPixel=null;
  function snapshot(){return d.getImageData(0,0,64,64)}
  function remember(){undo.push(snapshot());if(undo.length>35)undo.shift();redo.length=0}
- function render(){ctx.clearRect(0,0,64,64);ctx.fillStyle="#c5c5cf";ctx.fillRect(0,0,64,64);ctx.fillStyle="#f0f0f5";for(let y=0;y<64;y+=8)for(let x=0;x<64;x+=8)if((x+y)%16===0)ctx.fillRect(x,y,8,8);ctx.drawImage(display,0,0)}
+ function render(){window.dispatchEvent(new Event("pcs-skin-change"));ctx.clearRect(0,0,64,64);ctx.fillStyle="#c5c5cf";ctx.fillRect(0,0,64,64);ctx.fillStyle="#f0f0f5";for(let y=0;y<64;y+=8)for(let x=0;x<64;x+=8)if((x+y)%16===0)ctx.fillRect(x,y,8,8);ctx.drawImage(display,0,0)}
  function pos(e){const rect=canvas.getBoundingClientRect();return {x:Math.max(0,Math.min(63,Math.floor((e.clientX-rect.left)*64/rect.width))),y:Math.max(0,Math.min(63,Math.floor((e.clientY-rect.top)*64/rect.height)))}}
  function hex(rgb){return "#"+[rgb[0],rgb[1],rgb[2]].map(v=>v.toString(16).padStart(2,"0")).join("")}
  function color(){const value=$("skin-color").value;return [parseInt(value.slice(1,3),16),parseInt(value.slice(3,5),16),parseInt(value.slice(5,7),16),255]}
