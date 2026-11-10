@@ -1,0 +1,21 @@
+"use strict";
+(()=>{
+ const $=id=>document.getElementById(id),canvas=$("ed-canvas"),ctx=canvas.getContext("2d");
+ let photo=null,photoURL=null,drag=null;
+ const positions={main:{x:640,y:340},sub:{x:640,y:555}};
+ const status=t=>$("ed-status").textContent=t;
+ function font(size){return "900 "+size+"px system-ui, sans-serif"}
+ function drawLine(text,p,size){if(!text)return;ctx.font=font(size);ctx.textAlign="center";ctx.textBaseline="middle";ctx.lineJoin="round";ctx.miterLimit=2;ctx.strokeStyle=$("ed-stroke-color").value;ctx.lineWidth=Number($("ed-stroke").value);ctx.fillStyle=$("ed-text-color").value;const words=text.trim().split(/\s+/);let lines=[],line="";for(const word of words){const next=line?line+" "+word:word;if(ctx.measureText(next).width>1150&&line){lines.push(line);line=word}else line=next}if(line)lines.push(line);const spacing=size*1.08;lines.slice(0,3).forEach((s,i)=>{const y=p.y+(i-(Math.min(lines.length,3)-1)/2)*spacing;if(ctx.lineWidth)ctx.strokeText(s,p.x,y,1180);ctx.fillText(s,p.x,y,1180)})}
+ function render(){const bg=$("ed-background").value;ctx.fillStyle=bg;ctx.fillRect(0,0,1280,720);if(photo){const scale=Math.max(1280/photo.width,720/photo.height);const w=photo.width*scale,h=photo.height*scale;ctx.drawImage(photo,(1280-w)/2,(720-h)/2,w,h)}else{const grad=ctx.createLinearGradient(0,0,1280,720);grad.addColorStop(0,"#10142c");grad.addColorStop(1,bg);ctx.fillStyle=grad;ctx.fillRect(0,0,1280,720);ctx.fillStyle="#ffffff18";ctx.beginPath();ctx.arc(1080,100,380,0,Math.PI*2);ctx.fill()}ctx.fillStyle="rgba(0,0,0,"+(Number($("ed-overlay").value)/100)+")";ctx.fillRect(0,0,1280,720);drawLine($("ed-title").value,positions.main,Number($("ed-font").value));drawLine($("ed-subtitle").value,positions.sub,58)}
+ ["ed-title","ed-subtitle","ed-font","ed-text-color","ed-stroke-color","ed-stroke","ed-overlay","ed-background"].forEach(id=>$(id).addEventListener("input",render));
+ $("ed-upload").addEventListener("change",async e=>{const file=e.target.files&&e.target.files[0];if(!file)return;if(!["image/png","image/jpeg","image/webp"].includes(file.type)){status("Choose a PNG, JPEG or WebP image.");return}if(file.size>20*1024*1024){status("Please choose an image smaller than 20 MB.");return}const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{if(photoURL)URL.revokeObjectURL(photoURL);photoURL=url;photo=img;render();status("Image loaded. Drag the text to place it.")};img.onerror=()=>{URL.revokeObjectURL(url);status("Could not open this image.")};img.src=url});
+ function coords(e){const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left)*1280/r.width,y:(e.clientY-r.top)*720/r.height}}
+ canvas.addEventListener("pointerdown",e=>{const p=coords(e);const dMain=Math.abs(p.y-positions.main.y),dSub=Math.abs(p.y-positions.sub.y);drag=dMain<dSub?"main":"sub";canvas.setPointerCapture(e.pointerId);positions[drag]={x:Math.max(30,Math.min(1250,p.x)),y:Math.max(40,Math.min(680,p.y))};render()});
+ canvas.addEventListener("pointermove",e=>{if(!drag)return;const p=coords(e);positions[drag]={x:Math.max(30,Math.min(1250,p.x)),y:Math.max(40,Math.min(680,p.y))};render()});
+ const stop=()=>{drag=null};canvas.addEventListener("pointerup",stop);canvas.addEventListener("pointercancel",stop);canvas.addEventListener("lostpointercapture",stop);
+ $("ed-reset").addEventListener("click",()=>{positions.main={x:640,y:340};positions.sub={x:640,y:555};render();status("Text positions reset.")});
+ $("ed-clear").addEventListener("click",()=>{photo=null;if(photoURL){URL.revokeObjectURL(photoURL);photoURL=null}$("ed-upload").value="";render();status("Photo removed.")});
+ function exportImage(type){render();canvas.toBlob(blob=>{if(!blob){status("Export failed. Try another browser.");return}const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="prince-thumbnail."+ (type==="image/png"?"png":"jpg");document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);status("1280 × 720 "+(type==="image/png"?"PNG":"JPEG")+" exported.")},type,.92)}
+ $("ed-png").addEventListener("click",()=>exportImage("image/png"));$("ed-jpg").addEventListener("click",()=>exportImage("image/jpeg"));
+ render();
+})();
