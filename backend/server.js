@@ -4,6 +4,9 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import Docker from 'dockerode';
 import admin from 'firebase-admin';
+import {provision,managedContainer} from './provision.js';
+import {attachFeatures} from './features.js';
+import {attachBilling} from './billing.js';
 
 const app=express();
 const port=Number(process.env.PORT||8080);
@@ -17,7 +20,7 @@ const nodeSecret=process.env.MC_NODE_SECRET;
 app.disable('x-powered-by');
 app.use(helmet());
 app.use(cors({origin,methods:['GET','POST'],allowedHeaders:['Authorization','Content-Type']}));
-app.use(express.json({limit:'16kb'}));
+app.use(express.json({limit:'2mb'}));
 app.use(rateLimit({windowMs:60000,limit:60,standardHeaders:'draft-7',legacyHeaders:false}));
 app.get('/api/health',(_req,res)=>res.json({service:'Prince Cloud V2',api:'online',minecraftNode:'check /api/node/status'}));
 async function authenticate(req,res,next){
@@ -26,6 +29,7 @@ async function authenticate(req,res,next){
   try{req.user=await admin.auth().verifyIdToken(match[1],true);next();}
   catch{return res.status(401).json({error:'Invalid authentication token'});}
 }
+attachBilling(app,{authenticate});
 app.use('/api',authenticate);
 async function adminOnly(req,res,next){
   try{
@@ -77,11 +81,21 @@ app.post('/api/servers/:id/actions',findOwned,async(req,res,next)=>{
     next(err);
   }
 });
+app.post('/api/admin/provision',adminOnly,async(req,res,next)=>{
+  try{
+    const {ownerUid,plan,name}=req.body||{};
+    if(typeof ownerUid!=='string'||!safeId.test(ownerUid))return res.status(400).json({error:'Invalid owner'});
+    const user=await admin.auth().getUser(ownerUid);
+    const result=await provision({docker,db,ownerUid:user.uid,plan,name});
+    res.status(201).json(result);
+  }catch(next){}
+});
+attachFeatures(app,{docker,db,findOwned,adminOnly});
 app.get('/api/admin/requests',adminOnly,async(_req,res,next)=>{
   try{
     const snap=await db.collection('hostingRequests').limit(100).get();
     res.json({requests:snap.docs.map(d=>({id:d.id,...d.data()}))});
   }catch(next){}
 });
-app.use((err,_req,res,_next)=>{console.error(err);res.status(500).json({error:'Server operation failed'});});
+app.use((err,_req,res,_next)=>{console.error(err);res.status(err.status||500).json({error:err.status&&err.status<500?err.message:'Server operation failed'});});
 app.listen(port,'127.0.0.1',()=>console.log('Prince Cloud API listening on localhost:'+port));

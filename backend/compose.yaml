@@ -1,0 +1,16 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DATA_DIR:-/var/lib/prince-cloud/servers}:${DATA_DIR:-/var/lib/prince-cloud/servers}
+      - ${BACKUP_DIR:-/var/lib/prince-cloud/backups}:${BACKUP_DIR:-/var/lib/prince-cloud/backups}
+      - ${FIREBASE_CREDENTIALS_HOST_PATH:?Set FIREBASE_CREDENTIALS_HOST_PATH}:/run/secrets/firebase.json:ro
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase.json
+      DATA_DIR: ${DATA_DIR:-/var/lib/prince-cloud/servers}
+      BACKUP_DIR: ${BACKUP_DIR:-/var/lib/prince-cloud/backups}
+# WARNING: Docker socket grants host-level control. Deploy only on an isolated trusted VPS.

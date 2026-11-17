@@ -46,3 +46,13 @@
 - `GET /api/admin/requests` (admin only)
 
 This code is a foundation for a real VPS deployment, not a hosted Minecraft service by itself.
+
+## Additional source modules
+- `provision.js`: admin-triggered Minecraft container creation with fixed image and resource limits (requires a VPS).
+- `features.js`: bounded log reading, limited file read/edit, stopped-server backup archives; restore explicitly returns 501 until implemented.
+- `billing.js`: optional checkout-session code; payments disabled without configuration and verified webhook handling.
+- `compose.yaml`: VPS-only deployment draft. Review host privileges before use.
+- `DEPLOYMENT.md`: networking and deployment checklist.
+- GitHub Actions workflow: syntax validation, **not** a live deployment.
+
+**Important limitations:** No VPS is attached; websocket console, full file operations, backup restore, subscription webhook entitlement, automated deployment and multi-node scheduling are not complete. Never represent them as operational.

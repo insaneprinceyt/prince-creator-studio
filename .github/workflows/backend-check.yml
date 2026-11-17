@@ -1,0 +1,21 @@
+name: Backend syntax validation
+on:
+  push:
+    paths: ['backend/**','.github/workflows/backend-check.yml']
+  pull_request:
+    paths: ['backend/**']
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+        working-directory: backend
+      - run: npm run check
+        working-directory: backend
+      - run: node --check provision.js && node --check features.js && node --check billing.js
+        working-directory: backend
+# This validates source only; it does NOT deploy a VPS or run Minecraft.

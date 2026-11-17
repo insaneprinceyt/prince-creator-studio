@@ -1,1 +1,23 @@
-{"name":"prince-cloud-v2-backend","version":"0.1.0","private":true,"type":"module","scripts":{"start":"node server.js","check":"node --check server.js"},"engines":{"node":">=20"},"dependencies":{"dockerode":"^4.0.7","express":"^4.21.2","firebase-admin":"^13.0.2","helmet":"^8.0.0","cors":"^2.8.5","express-rate-limit":"^7.5.0"}}
+{
+  "name": "prince-cloud-v2-backend",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check provision.js && node --check features.js && node --check billing.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dockerode": "^4.0.7",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.0.2",
+    "helmet": "^8.0.0",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^7.5.0",
+    "tar-stream": "^3.1.7",
+    "stripe": "^17.7.0"
+  }
+}
