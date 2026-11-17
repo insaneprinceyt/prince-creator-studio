@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function admin() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.enabled == true;
+    }
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+    match /hostingRequests/{requestId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['ownerUid','plan','status','createdAt'])
+        && request.resource.data.keys().hasAll(['ownerUid','plan','status','createdAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.plan in ['Starter','Pro','Elite']
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow read: if signedIn() && (resource.data.ownerUid == request.auth.uid || admin());
+      allow update: if admin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['approved','rejected'];
+      allow delete: if false;
+    }
+  }
+}
